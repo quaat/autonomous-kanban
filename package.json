@@ -11,7 +11,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "check": "npm run typecheck && npm run lint && npm run test && npm run build"
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "dev:http": "VITE_API_MODE=http VITE_API_BASE_URL=http://localhost:5174 vite --port=3000 --host=0.0.0.0",
+    "fixture-server": "node scripts/fixture-server.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.546.0",

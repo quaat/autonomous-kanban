@@ -1,0 +1,199 @@
+[
+  {
+    "id": "start-node",
+    "type": "start",
+    "label": "Start",
+    "subtitle": "Idea Submitted",
+    "position": {
+      "x": 50,
+      "y": 100
+    }
+  },
+  {
+    "id": "analyze-node",
+    "type": "llm_task",
+    "label": "Analyze Idea",
+    "subtitle": "LLM task",
+    "position": {
+      "x": 200,
+      "y": 85
+    },
+    "config": {
+      "reviewer": "Gemini 1.5 Pro",
+      "estimatedDuration": "1 min",
+      "maxIterations": 1,
+      "severityThreshold": "Low",
+      "requireTests": false,
+      "timeout": "5 m"
+    }
+  },
+  {
+    "id": "clarify-node",
+    "type": "decision",
+    "label": "Need clarification?",
+    "position": {
+      "x": 380,
+      "y": 75
+    }
+  },
+  {
+    "id": "feedback-node-1",
+    "type": "human_task",
+    "label": "Feedback Required",
+    "subtitle": "Human input",
+    "position": {
+      "x": 520,
+      "y": 85
+    }
+  },
+  {
+    "id": "plan-node",
+    "type": "llm_task",
+    "label": "Create Implementation Plan",
+    "subtitle": "LLM planner",
+    "position": {
+      "x": 720,
+      "y": 85
+    }
+  },
+  {
+    "id": "graph-node",
+    "type": "llm_task",
+    "label": "Generate Task Graph",
+    "subtitle": "LLM task",
+    "position": {
+      "x": 920,
+      "y": 85
+    }
+  },
+  {
+    "id": "ready-node",
+    "type": "kanban_state",
+    "label": "Ready for Implementation",
+    "subtitle": "Kanban state",
+    "position": {
+      "x": 50,
+      "y": 300
+    }
+  },
+  {
+    "id": "todo-node",
+    "type": "kanban_state",
+    "label": "To Do",
+    "subtitle": "Kanban state",
+    "position": {
+      "x": 230,
+      "y": 300
+    }
+  },
+  {
+    "id": "claim-node",
+    "type": "service_task",
+    "label": "Worker Claim Task",
+    "subtitle": "System task",
+    "position": {
+      "x": 400,
+      "y": 300
+    }
+  },
+  {
+    "id": "progress-node",
+    "type": "kanban_state",
+    "label": "In Progress",
+    "subtitle": "Kanban state",
+    "position": {
+      "x": 570,
+      "y": 300
+    }
+  },
+  {
+    "id": "needs-feedback-node",
+    "type": "decision",
+    "label": "Needs human feedback?",
+    "position": {
+      "x": 740,
+      "y": 290
+    }
+  },
+  {
+    "id": "feedback-node-2",
+    "type": "human_task",
+    "label": "Feedback Required",
+    "subtitle": "Human input",
+    "position": {
+      "x": 920,
+      "y": 300
+    }
+  },
+  {
+    "id": "verification-node",
+    "type": "service_task",
+    "label": "Verification",
+    "subtitle": "Automated checks",
+    "position": {
+      "x": 230,
+      "y": 500
+    }
+  },
+  {
+    "id": "review-node",
+    "type": "review_task",
+    "label": "In Review",
+    "subtitle": "LLM review",
+    "position": {
+      "x": 420,
+      "y": 500
+    },
+    "config": {
+      "nodeName": "In Review",
+      "type": "Review Task",
+      "reviewer": "GPT-4.1",
+      "maxIterations": 3,
+      "onPass": "Move to Done",
+      "onFail": "Append instructions and move to To Do",
+      "severityThreshold": "High",
+      "requireTests": true,
+      "estimatedDuration": "15 min",
+      "timeout": "2 h"
+    }
+  },
+  {
+    "id": "passed-node",
+    "type": "decision",
+    "label": "Review passed?",
+    "position": {
+      "x": 600,
+      "y": 490
+    }
+  },
+  {
+    "id": "done-node",
+    "type": "end",
+    "label": "Done",
+    "subtitle": "Completed",
+    "position": {
+      "x": 780,
+      "y": 500
+    }
+  },
+  {
+    "id": "retry-node",
+    "type": "kanban_state",
+    "label": "Add review findings / retry",
+    "subtitle": "Return to To Do",
+    "position": {
+      "x": 570,
+      "y": 650
+    }
+  },
+  {
+    "id": "blocked-node",
+    "type": "blocked",
+    "label": "Blocked / Escalate",
+    "subtitle": "Manual intervention",
+    "position": {
+      "x": 780,
+      "y": 650
+    }
+  }
+]
