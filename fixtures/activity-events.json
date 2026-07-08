@@ -1,0 +1,39 @@
+[
+  {
+    "id": "evt-1",
+    "time": "2m ago",
+    "type": "info",
+    "message": "Planner created 8 implementation tasks",
+    "detail": "by Planner Agent"
+  },
+  {
+    "id": "evt-2",
+    "time": "14m ago",
+    "type": "error",
+    "message": "Review failed: 2 findings",
+    "detail": "LLM review for verification pipeline"
+  },
+  {
+    "id": "evt-3",
+    "time": "27m ago",
+    "type": "agent",
+    "message": "Coding agent started",
+    "detail": "Worker claim and lease system",
+    "agent": "Claude"
+  },
+  {
+    "id": "evt-4",
+    "time": "1h ago",
+    "type": "success",
+    "message": "Task completed",
+    "detail": "Audit event model"
+  },
+  {
+    "id": "evt-5",
+    "time": "2h ago",
+    "type": "info",
+    "message": "Worker heartbeat",
+    "detail": "Codex",
+    "agent": "Codex"
+  }
+]

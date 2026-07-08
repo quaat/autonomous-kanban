@@ -1,0 +1,124 @@
+[
+  {
+    "id": "e1",
+    "source": "start-node",
+    "target": "analyze-node"
+  },
+  {
+    "id": "e2",
+    "source": "analyze-node",
+    "target": "clarify-node"
+  },
+  {
+    "id": "e3",
+    "source": "clarify-node",
+    "target": "feedback-node-1",
+    "label": "Yes",
+    "variant": "warning"
+  },
+  {
+    "id": "e4",
+    "source": "clarify-node",
+    "target": "plan-node",
+    "label": "No",
+    "variant": "success"
+  },
+  {
+    "id": "e5",
+    "source": "plan-node",
+    "target": "graph-node"
+  },
+  {
+    "id": "e6",
+    "source": "graph-node",
+    "target": "ready-node",
+    "label": "Task graph generated",
+    "variant": "dashed"
+  },
+  {
+    "id": "e6-alt",
+    "source": "feedback-node-1",
+    "target": "plan-node",
+    "label": "Resolved",
+    "variant": "dashed"
+  },
+  {
+    "id": "e7",
+    "source": "ready-node",
+    "target": "todo-node"
+  },
+  {
+    "id": "e8",
+    "source": "todo-node",
+    "target": "claim-node"
+  },
+  {
+    "id": "e9",
+    "source": "claim-node",
+    "target": "progress-node"
+  },
+  {
+    "id": "e10",
+    "source": "progress-node",
+    "target": "needs-feedback-node"
+  },
+  {
+    "id": "e11",
+    "source": "needs-feedback-node",
+    "target": "feedback-node-2",
+    "label": "Yes",
+    "variant": "warning"
+  },
+  {
+    "id": "e12",
+    "source": "needs-feedback-node",
+    "target": "verification-node",
+    "label": "No",
+    "variant": "success"
+  },
+  {
+    "id": "e13",
+    "source": "feedback-node-2",
+    "target": "progress-node",
+    "label": "Resume",
+    "variant": "dashed"
+  },
+  {
+    "id": "e14",
+    "source": "verification-node",
+    "target": "review-node"
+  },
+  {
+    "id": "e15",
+    "source": "review-node",
+    "target": "passed-node"
+  },
+  {
+    "id": "e16",
+    "source": "passed-node",
+    "target": "done-node",
+    "label": "Yes",
+    "variant": "success"
+  },
+  {
+    "id": "e17",
+    "source": "passed-node",
+    "target": "retry-node",
+    "label": "No",
+    "variant": "error"
+  },
+  {
+    "id": "e18",
+    "source": "retry-node",
+    "target": "todo-node",
+    "label": "Iterate",
+    "variant": "dashed"
+  },
+  {
+    "id": "e19",
+    "source": "retry-node",
+    "target": "blocked-node",
+    "label": "Max iterations reached",
+    "variant": "error"
+  }
+]

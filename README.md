@@ -9,20 +9,44 @@ An autonomous development productivity platform mockup featuring interactive, hi
 This application is a **frontend-only client-side mockup**.
 
 - **No real backend integrations**: no production APIs, databases, authentication, GitHub/repository access, LLM providers, workers, or coding agents are contacted.
-- **Mock API client only**: UI components call hooks, hooks call services, services call the typed API client interface, and the current client implementation is `src/api/mockApiClient.ts`.
+- **Two current client modes**: UI components call hooks, hooks call services, and services call the typed API client interface. The default implementation is the in-memory `src/api/mockApiClient.ts`; `VITE_API_MODE=http` selects the production-shaped `src/api/httpApiClient.ts` against the local fixture server.
 - **Typed API contract layer**: DTOs are defined separately from UI/domain types in `src/api/dto.ts`; mappers in `src/api/mappers.ts` keep the UI insulated from future backend DTO changes.
 - **API contract documentation**: intended future HTTP endpoints are documented in `docs/api-contract.md`.
 - **Local mock state**: the mock API uses seeded data from `src/data` and simulates network-compatible async calls with small latency.
 
 ### API mode
 
-The supported mode today is mock mode:
+The default development path remains in-memory mock mode:
 
 ```bash
-VITE_API_MODE=mock npm run dev
+npm run dev
+# equivalent to: VITE_API_MODE=mock npm run dev
 ```
 
-`VITE_API_MODE` defaults to `mock` when unset. `VITE_API_MODE=http` is intentionally not implemented yet and throws a typed unsupported-mode `ApiError` so a future backend integration can be added deliberately by replacing the factory branch in `src/api/client.ts` with a real HTTP client. Tests use isolated mock API clients via explicit factory reset/injection helpers.
+HTTP fixture mode is available for the first backend-facing integration slice. Start the fixture API in one terminal, then start Vite in HTTP mode from another terminal:
+
+```bash
+npm run fixture-server
+npm run dev:http
+```
+
+`VITE_API_MODE` defaults to `mock` when unset. `VITE_API_MODE=http` selects `src/api/httpApiClient.ts`, which calls the lightweight fixture server at `VITE_API_BASE_URL` (default `http://localhost:5174`). HTTP requests time out after `VITE_API_TIMEOUT_MS` (default `10000`) and report typed API errors. You can point the client at another compatible development backend with:
+
+```bash
+VITE_API_MODE=http VITE_API_BASE_URL=http://localhost:5174 VITE_API_TIMEOUT_MS=10000 npm run dev
+```
+
+
+Supported API environment values:
+
+```text
+VITE_API_MODE=mock
+VITE_API_MODE=http
+VITE_API_BASE_URL=http://localhost:5174
+VITE_API_TIMEOUT_MS=10000
+```
+
+The POSIX-style environment variables used by `dev:http` match this Linux-oriented development environment. The fixture backend is intentionally local and in-memory: it has no production database, authentication, worker execution, LLM calls, GitHub/repository side effects, or durable persistence. Tests use isolated mock or fixture HTTP clients via explicit factory reset/injection helpers.
 
 ---
 
