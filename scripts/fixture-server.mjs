@@ -8,6 +8,7 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const taskStatuses = ["idea", "ready_for_implementation", "to_do", "in_progress", "feedback_required", "in_review", "done"];
 const taskPriorities = ["low", "medium", "high"];
 const activityEventTypes = ["info", "success", "warning", "error", "agent"];
+const agents = ["Claude", "Codex", "GPT-4.1", "Gemini 1.5 Pro"];
 
 const clone = (value) => structuredClone(value);
 const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -19,7 +20,10 @@ const oneOf = (values, value) => isString(value) && values.includes(value);
 const isTaskStatus = (value) => oneOf(taskStatuses, value);
 const isTaskPriority = (value) => oneOf(taskPriorities, value);
 const isActivityEventType = (value) => oneOf(activityEventTypes, value);
+const isAgent = (value) => oneOf(agents, value);
 const hasPosition = (value) => isRecord(value) && isFiniteNumber(value.x) && isFiniteNumber(value.y);
+const hasReviewIteration = (value) =>
+  isRecord(value) && isFiniteNumber(value.current) && isFiniteNumber(value.max);
 const optional = (body, key, guard, label = key) => {
   if (body[key] !== undefined && !guard(body[key])) return `${label} is invalid`;
   return null;
@@ -75,6 +79,9 @@ const taskBodyError = (body, { requireTitle = false, requireStatus = false } = {
     optional(body, "blockedBy", isStringArray, "Task blockedBy") ??
     optional(body, "progress", isFiniteNumber, "Task progress") ??
     optional(body, "comments", isFiniteNumber, "Task comments") ??
+    optional(body, "agent", isAgent, "Task agent") ??
+    optional(body, "reviewIteration", hasReviewIteration, "Task reviewIteration") ??
+    optional(body, "id", isString, "Task id") ??
     optional(body, "description", isString, "Task description") ??
     optional(body, "branch", isString, "Task branch") ??
     optional(body, "dueDate", isString, "Task dueDate") ??
@@ -131,7 +138,14 @@ export async function createFixtureServer() {
         if (!body) return;
         const error = taskBodyError(body, { requireTitle: true, requireStatus: true });
         if (error) return badRequest(res, error);
-        const task = { id: body.id ?? `task-${++state.taskSequence}`, title: body.title, description: body.description ?? "", priority: body.priority ?? "medium", labels: body.labels ?? [], ...body };
+        const task = {
+          id: body.id ?? `task-${++state.taskSequence}`,
+          title: body.title,
+          description: body.description ?? "",
+          priority: body.priority ?? "medium",
+          labels: body.labels ?? [],
+          ...body,
+        };
         state.tasks.push(task);
         return json(res, 201, clone(task));
       }
@@ -197,7 +211,14 @@ export async function createFixtureServer() {
         if (error) return badRequest(res, error);
         const patch = { ...body };
         delete patch.id;
-        state.nodes[index] = { ...state.nodes[index], ...patch, id, config: patch.config ? { ...state.nodes[index].config, ...patch.config } : state.nodes[index].config };
+        state.nodes[index] = {
+          ...state.nodes[index],
+          ...patch,
+          id,
+          config: patch.config
+            ? { ...state.nodes[index].config, ...patch.config }
+            : state.nodes[index].config,
+        };
         return json(res, 200, clone(state.nodes[index]));
       }
 
