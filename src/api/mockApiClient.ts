@@ -32,6 +32,18 @@ export class MockAutonomousDevelopmentApiClient implements AutonomousDevelopment
   private events: ActivityEventDto[] = INITIAL_EVENTS.map(activityEventDomainToDto);
   private nodes: WorkflowNodeDto[] = WORKFLOW_NODES.map(workflowNodeDomainToDto);
   private edges: WorkflowEdgeDto[] = WORKFLOW_EDGES.map(workflowEdgeDomainToDto);
+  private taskSequence = 1000;
+  private eventSequence = 1000;
+
+  private nextTaskId(): string {
+    this.taskSequence += 1;
+    return `task-${this.taskSequence}`;
+  }
+
+  private nextEventId(): string {
+    this.eventSequence += 1;
+    return `evt-${this.eventSequence}`;
+  }
 
   async listTasks(): Promise<TaskDto[]> {
     await delay();
@@ -41,7 +53,7 @@ export class MockAutonomousDevelopmentApiClient implements AutonomousDevelopment
   async createTask(input: CreateTaskRequestDto): Promise<TaskDto> {
     await delay();
     const task: TaskDto = {
-      id: input.id ?? `task-${Date.now()}`,
+      id: input.id ?? this.nextTaskId(),
       title: input.title,
       status: input.status,
       description: input.description ?? "",
@@ -91,7 +103,7 @@ export class MockAutonomousDevelopmentApiClient implements AutonomousDevelopment
 
   async createActivityEvent(input: CreateActivityEventRequestDto): Promise<ActivityEventDto> {
     await delay();
-    const event = { id: input.id ?? `evt-${Date.now()}`, ...input };
+    const event = { id: input.id ?? this.nextEventId(), ...input };
     this.events.unshift(event);
     return clone(event);
   }

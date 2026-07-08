@@ -1,7 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { MockAutonomousDevelopmentApiClient } from "../api/mockApiClient";
+import { resetApiClientForTesting, setApiClientForTesting } from "../api/client";
 import { createTask, getEvents, getTasks, updateTaskStatus } from "./boardService";
 
 describe("boardService", () => {
+  beforeEach(() => {
+    setApiClientForTesting(new MockAutonomousDevelopmentApiClient());
+  });
+
+  afterEach(() => {
+    resetApiClientForTesting();
+  });
+
   it("maps task DTOs to board domain cards", async () => {
     const tasks = await getTasks();
     expect(tasks[0]).toMatchObject({
@@ -17,6 +27,18 @@ describe("boardService", () => {
       id: expect.any(String),
       message: expect.any(String),
       type: expect.any(String),
+    });
+  });
+
+  it("createTask returns a domain object with stable required fields", async () => {
+    const created = await createTask({ title: "Service-created task", status: "idea" });
+
+    expect(created).toMatchObject({
+      id: expect.stringMatching(/^task-/),
+      title: "Service-created task",
+      status: "idea",
+      priority: "medium",
+      labels: [],
     });
   });
 

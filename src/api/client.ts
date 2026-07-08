@@ -12,6 +12,7 @@ import type {
   WorkflowSimulationResultDto,
   WorkflowValidationResultDto,
 } from "./dto";
+import { ApiError } from "./errors";
 import { MockAutonomousDevelopmentApiClient } from "./mockApiClient";
 
 export interface AutonomousDevelopmentApiClient {
@@ -34,17 +35,35 @@ export interface AutonomousDevelopmentApiClient {
 
 let apiClient: AutonomousDevelopmentApiClient | null = null;
 
+export function createApiClientForMode(apiMode: string | undefined): AutonomousDevelopmentApiClient {
+  const resolvedApiMode = apiMode ?? "mock";
+
+  if (resolvedApiMode === "http") {
+    throw new ApiError(
+      "UNSUPPORTED_API_MODE",
+      "HTTP API client is not implemented yet. Use VITE_API_MODE=mock."
+    );
+  }
+
+  if (resolvedApiMode !== "mock") {
+    throw new ApiError(
+      "UNSUPPORTED_API_MODE",
+      `Unsupported API mode '${resolvedApiMode}'. Use VITE_API_MODE=mock.`
+    );
+  }
+
+  return new MockAutonomousDevelopmentApiClient();
+}
+
 export function getApiClient(): AutonomousDevelopmentApiClient {
-  const apiMode = import.meta.env.VITE_API_MODE ?? "mock";
-
-  if (apiMode === "http") {
-    throw new Error("HTTP API client is not implemented yet. Use VITE_API_MODE=mock.");
-  }
-
-  if (apiMode !== "mock") {
-    throw new Error(`Unsupported API mode '${apiMode}'. Use VITE_API_MODE=mock.`);
-  }
-
-  apiClient ??= new MockAutonomousDevelopmentApiClient();
+  apiClient ??= createApiClientForMode(import.meta.env.VITE_API_MODE);
   return apiClient;
+}
+
+export function setApiClientForTesting(client: AutonomousDevelopmentApiClient | null): void {
+  apiClient = client;
+}
+
+export function resetApiClientForTesting(): void {
+  apiClient = null;
 }

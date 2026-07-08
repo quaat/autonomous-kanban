@@ -22,7 +22,7 @@ The supported mode today is mock mode:
 VITE_API_MODE=mock npm run dev
 ```
 
-`VITE_API_MODE` defaults to `mock` when unset. `VITE_API_MODE=http` is intentionally not implemented yet and fails clearly so a future backend integration can be added deliberately by replacing the factory branch in `src/api/client.ts` with a real HTTP client.
+`VITE_API_MODE` defaults to `mock` when unset. `VITE_API_MODE=http` is intentionally not implemented yet and throws a typed unsupported-mode `ApiError` so a future backend integration can be added deliberately by replacing the factory branch in `src/api/client.ts` with a real HTTP client. Tests use isolated mock API clients via explicit factory reset/injection helpers.
 
 ---
 
@@ -82,7 +82,7 @@ Optimized assets are written to `/dist`.
 npm run check
 ```
 
-This runs type checking, ESLint, Vitest, and the production build.
+This runs type checking, ESLint, Vitest, and the production build. GitHub Actions CI runs the same PR-ready verification path with `npm ci` followed by `npm run check` on pull requests and pushes to `main`.
 
 ---
 
