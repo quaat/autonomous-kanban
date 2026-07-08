@@ -10,6 +10,9 @@ export default function WorkflowPage() {
   const {
     nodes,
     edges,
+    loading,
+    error,
+    retry,
     selectedNodeId,
     setSelectedNodeId,
     selectedNode,
@@ -24,10 +27,34 @@ export default function WorkflowPage() {
     handlePublish,
   } = useWorkflowState();
 
+  if (loading) {
+    return (
+      <div className="flex-1 bg-[#F3F4F6] p-6 text-sm font-semibold text-slate-500">
+        Loading workflow...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex-1 bg-[#F3F4F6] p-6">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 shadow-sm">
+          <p className="font-bold">{error}</p>
+          <button
+            onClick={() => void retry()}
+            className="mt-3 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex flex-col min-h-0 relative select-none bg-[#F3F4F6]">
       {/* Top Workflow Builder Actions Header */}
-      <WorkflowToolbar 
+      <WorkflowToolbar
         onValidate={handleValidate}
         onSimulation={handleSimulation}
         onPublish={handlePublish}
@@ -41,7 +68,7 @@ export default function WorkflowPage() {
         <ComponentPalette />
 
         {/* Center: Large Interactive Vector Canvas */}
-        <WorkflowCanvas 
+        <WorkflowCanvas
           nodes={nodes}
           edges={edges}
           selectedNodeId={selectedNodeId}
@@ -51,7 +78,7 @@ export default function WorkflowPage() {
 
         {/* Right Side: Active Inspector settings block */}
         {selectedNode && (
-          <WorkflowInspector 
+          <WorkflowInspector
             key={selectedNode.id}
             node={selectedNode}
             onClose={() => setSelectedNodeId(null)}
@@ -61,24 +88,26 @@ export default function WorkflowPage() {
       </div>
 
       {/* Bottom status bar metrics strip */}
-      <WorkflowStatusBar 
+      <WorkflowStatusBar
         isValidating={isValidating}
         isSimulating={isSimulating}
-        onViewReport={() => triggerToast("Opening full simulation run logs and dependency matrix report.", "info")}
+        onViewReport={() =>
+          triggerToast("Opening full simulation run logs and dependency matrix report.", "info")
+        }
       />
 
       {/* Floating Animated Feedback Toast */}
       {toast && (
-        <div className={`absolute bottom-20 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-xl border shadow-xl z-50 flex items-center gap-2.5 text-xs font-bold animate-in slide-in-from-bottom duration-200 ${
-          toast.type === "success" 
-            ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
-            : toast.type === "warning"
-              ? "bg-amber-50 border-amber-200 text-amber-800"
-              : "bg-blue-50 border-blue-200 text-blue-800"
-        }`}>
-          <span>
-            {toast.type === "success" ? "✓" : toast.type === "warning" ? "⚠️" : "ℹ️"}
-          </span>
+        <div
+          className={`absolute bottom-20 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-xl border shadow-xl z-50 flex items-center gap-2.5 text-xs font-bold animate-in slide-in-from-bottom duration-200 ${
+            toast.type === "success"
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+              : toast.type === "warning"
+                ? "bg-amber-50 border-amber-200 text-amber-800"
+                : "bg-blue-50 border-blue-200 text-blue-800"
+          }`}
+        >
+          <span>{toast.type === "success" ? "✓" : toast.type === "warning" ? "⚠️" : "ℹ️"}</span>
           <span>{toast.message}</span>
         </div>
       )}
