@@ -13,7 +13,7 @@ import type {
   WorkflowSimulationResultDto,
   WorkflowValidationResultDto,
 } from "./dto";
-import { ApiError, apiErrorFromHttpResponse } from "./errors";
+import { ApiError, apiErrorFromHttpResponse, isApiError } from "./errors";
 import {
   isActivityEventDto,
   isActivityEventDtoArray,
@@ -91,39 +91,61 @@ export class HttpAutonomousDevelopmentApiClient implements AutonomousDevelopment
   private async request<T>(path: string, init: RequestInit, guard: Guard<T>): Promise<T> {
     const endpoint = `${this.baseUrl}${path}`;
     const controller = new AbortController();
-    const timeoutId = globalThis.setTimeout(() => controller.abort(), this.timeoutMs);
-    let response: Response;
+    let didTimeout = false;
+    const timeoutId = globalThis.setTimeout(() => {
+      didTimeout = true;
+      controller.abort();
+    }, this.timeoutMs);
+
     try {
-      response = await fetch(endpoint, {
+      const response = await fetch(endpoint, {
         ...init,
         headers: { Accept: "application/json", ...init.headers },
         signal: controller.signal,
       });
+
+      if (!response.ok) {
+        const message = await this.errorMessage(response, path);
+        throw apiErrorFromHttpResponse(response, message);
+      }
+
+      let payload: unknown;
+      try {
+        payload = await response.json();
+      } catch (error) {
+        if (didTimeout || isAbortError(error)) {
+          throw new ApiError(
+            "HTTP_TIMEOUT",
+            `HTTP request to ${path} timed out after ${this.timeoutMs}ms`,
+            error
+          );
+        }
+
+        throw new ApiError("HTTP_RESPONSE_INVALID", `HTTP response from ${path} was not valid JSON`, error);
+      }
+
+      if (!guard(payload)) {
+        throw new ApiError("HTTP_RESPONSE_INVALID", `HTTP response from ${path} did not match the expected shape`);
+      }
+
+      return payload;
     } catch (error) {
-      if (controller.signal.aborted) {
+      if (didTimeout || isAbortError(error)) {
         throw new ApiError(
           "HTTP_TIMEOUT",
           `HTTP request to ${path} timed out after ${this.timeoutMs}ms`,
           error
         );
       }
+
+      if (isApiError(error)) {
+        throw error;
+      }
+
       throw new ApiError("HTTP_REQUEST_FAILED", `HTTP request to ${path} failed`, error);
     } finally {
       globalThis.clearTimeout(timeoutId);
     }
-    if (!response.ok) {
-      throw apiErrorFromHttpResponse(response, await this.errorMessage(response, path));
-    }
-    let payload: unknown;
-    try {
-      payload = await response.json();
-    } catch (error) {
-      throw new ApiError("HTTP_RESPONSE_INVALID", `HTTP response from ${path} was not valid JSON`, error);
-    }
-    if (!guard(payload)) {
-      throw new ApiError("HTTP_RESPONSE_INVALID", `HTTP response from ${path} did not match the expected shape`);
-    }
-    return payload;
   }
 
   private async errorMessage(response: Response, path: string): Promise<string> {
@@ -145,4 +167,13 @@ export function normalizeTimeoutMs(value: unknown): number {
     return DEFAULT_HTTP_TIMEOUT_MS;
   }
   return value;
+}
+
+function isAbortError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    error.name === "AbortError"
+  );
 }

@@ -103,46 +103,86 @@ describe("HttpAutonomousDevelopmentApiClient", () => {
 
   it("server returns task with invalid status -> HTTP_RESPONSE_INVALID", async () => {
     const invalidServer = jsonServer([{ id: "task-x", title: "Bad", status: "bogus", priority: "medium", labels: [] }]);
-    const invalidClient = new HttpAutonomousDevelopmentApiClient({ baseUrl: await listen(invalidServer) });
-    await expect(invalidClient.listTasks()).rejects.toMatchObject({ code: "HTTP_RESPONSE_INVALID" });
-    await close(invalidServer);
+    try {
+      const invalidClient = new HttpAutonomousDevelopmentApiClient({ baseUrl: await listen(invalidServer) });
+      await expect(invalidClient.listTasks()).rejects.toMatchObject({ code: "HTTP_RESPONSE_INVALID" });
+    } finally {
+      await close(invalidServer);
+    }
   });
 
   it("server returns task with invalid priority -> HTTP_RESPONSE_INVALID", async () => {
     const invalidServer = jsonServer([{ id: "task-x", title: "Bad", status: "idea", priority: "urgent", labels: [] }]);
-    const invalidClient = new HttpAutonomousDevelopmentApiClient({ baseUrl: await listen(invalidServer) });
-    await expect(invalidClient.listTasks()).rejects.toMatchObject({ code: "HTTP_RESPONSE_INVALID" });
-    await close(invalidServer);
+    try {
+      const invalidClient = new HttpAutonomousDevelopmentApiClient({ baseUrl: await listen(invalidServer) });
+      await expect(invalidClient.listTasks()).rejects.toMatchObject({ code: "HTTP_RESPONSE_INVALID" });
+    } finally {
+      await close(invalidServer);
+    }
   });
 
   it("server returns activity event with invalid type -> HTTP_RESPONSE_INVALID", async () => {
     const invalidServer = jsonServer([{ id: "evt-x", time: "now", type: "bogus", message: "Bad" }]);
-    const invalidClient = new HttpAutonomousDevelopmentApiClient({ baseUrl: await listen(invalidServer) });
-    await expect(invalidClient.listActivityEvents()).rejects.toMatchObject({ code: "HTTP_RESPONSE_INVALID" });
-    await close(invalidServer);
+    try {
+      const invalidClient = new HttpAutonomousDevelopmentApiClient({ baseUrl: await listen(invalidServer) });
+      await expect(invalidClient.listActivityEvents()).rejects.toMatchObject({ code: "HTTP_RESPONSE_INVALID" });
+    } finally {
+      await close(invalidServer);
+    }
   });
 
   it("server returns workflow node with invalid type -> HTTP_RESPONSE_INVALID", async () => {
     const invalidServer = jsonServer([{ id: "node-x", type: "bogus", label: "Bad", position: { x: 0, y: 0 } }]);
-    const invalidClient = new HttpAutonomousDevelopmentApiClient({ baseUrl: await listen(invalidServer) });
-    await expect(invalidClient.listWorkflowNodes()).rejects.toMatchObject({ code: "HTTP_RESPONSE_INVALID" });
-    await close(invalidServer);
+    try {
+      const invalidClient = new HttpAutonomousDevelopmentApiClient({ baseUrl: await listen(invalidServer) });
+      await expect(invalidClient.listWorkflowNodes()).rejects.toMatchObject({ code: "HTTP_RESPONSE_INVALID" });
+    } finally {
+      await close(invalidServer);
+    }
   });
 
   it("server returns workflow edge with invalid variant -> HTTP_RESPONSE_INVALID", async () => {
     const invalidServer = jsonServer([{ id: "edge-x", source: "a", target: "b", variant: "bogus" }]);
-    const invalidClient = new HttpAutonomousDevelopmentApiClient({ baseUrl: await listen(invalidServer) });
-    await expect(invalidClient.listWorkflowEdges()).rejects.toMatchObject({ code: "HTTP_RESPONSE_INVALID" });
-    await close(invalidServer);
+    try {
+      const invalidClient = new HttpAutonomousDevelopmentApiClient({ baseUrl: await listen(invalidServer) });
+      await expect(invalidClient.listWorkflowEdges()).rejects.toMatchObject({ code: "HTTP_RESPONSE_INVALID" });
+    } finally {
+      await close(invalidServer);
+    }
   });
 
   it("timeout causes HTTP_TIMEOUT", async () => {
     const slowServer = createServer((_req, res) => {
       globalThis.setTimeout(() => res.end(JSON.stringify([])), 50);
     });
-    const slowClient = new HttpAutonomousDevelopmentApiClient({ baseUrl: await listen(slowServer), timeoutMs: 1 });
-    await expect(slowClient.listTasks()).rejects.toMatchObject({ code: "HTTP_TIMEOUT" });
-    await close(slowServer);
+    try {
+      const slowClient = new HttpAutonomousDevelopmentApiClient({ baseUrl: await listen(slowServer), timeoutMs: 1 });
+      await expect(slowClient.listTasks()).rejects.toMatchObject({ code: "HTTP_TIMEOUT" });
+    } finally {
+      await close(slowServer);
+    }
+  });
+
+
+
+  it("times out if response headers arrive but JSON body stalls", async () => {
+    const slowBodyServer = createServer((_req, res) => {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      globalThis.setTimeout(() => {
+        res.end(JSON.stringify([]));
+      }, 50);
+    });
+
+    try {
+      const slowClient = new HttpAutonomousDevelopmentApiClient({
+        baseUrl: await listen(slowBodyServer),
+        timeoutMs: 1,
+      });
+
+      await expect(slowClient.listTasks()).rejects.toMatchObject({ code: "HTTP_TIMEOUT" });
+    } finally {
+      await close(slowBodyServer);
+    }
   });
 
   it("non-timeout network failure still causes HTTP_REQUEST_FAILED", async () => {
