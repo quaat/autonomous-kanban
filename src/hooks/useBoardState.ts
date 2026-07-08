@@ -13,25 +13,36 @@ export function useBoardState(searchQuery: string) {
   const [tasks, setTasks] = useState<TaskCard[]>([]);
   const [events, setEvents] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>("task-8");
   const [draggedOverColumn, setDraggedOverColumn] = useState<string | null>(null);
   const [activeAddColumn, setActiveAddColumn] = useState<TaskStatus | null>(null);
   const [newCardTitle, setNewCardTitle] = useState("");
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const fetchedTasks = await getTasks();
-        const fetchedEvents = await getEvents();
-        setTasks(fetchedTasks);
-        setEvents(fetchedEvents);
-      } catch (err) {
-        console.error("Failed to load board state", err);
-      } finally {
-        setLoading(false);
-      }
+  const loadData = async (showLoading = true) => {
+    if (showLoading) {
+      setLoading(true);
     }
-    loadData();
+    setError(null);
+    try {
+      const fetchedTasks = await getTasks();
+      const fetchedEvents = await getEvents();
+      setTasks(fetchedTasks);
+      setEvents(fetchedEvents);
+    } catch (err) {
+      console.error("Failed to load board state", err);
+      setError("Failed to load board state");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timeoutId = globalThis.setTimeout(() => {
+      void loadData(false);
+    }, 0);
+
+    return () => globalThis.clearTimeout(timeoutId);
   }, []);
 
   const selectedTask = tasks.find((t) => t.id === selectedTaskId) || null;
@@ -162,6 +173,8 @@ export function useBoardState(searchQuery: string) {
     tasks,
     events,
     loading,
+    error,
+    retry: loadData,
     selectedTaskId,
     setSelectedTaskId,
     selectedTask,

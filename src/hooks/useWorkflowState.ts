@@ -13,25 +13,39 @@ export function useWorkflowState() {
   const [nodes, setNodes] = useState<WorkflowNode[]>([]);
   const [edges, setEdges] = useState<WorkflowEdge[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>("review-node");
   const [isValidating, setIsValidating] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "info" | "warning" } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "info" | "warning";
+  } | null>(null);
+
+  const loadData = async (showLoading = true) => {
+    if (showLoading) {
+      setLoading(true);
+    }
+    setError(null);
+    try {
+      const fetchedNodes = await getWorkflowNodes();
+      const fetchedEdges = await getWorkflowEdges();
+      setNodes(fetchedNodes);
+      setEdges(fetchedEdges);
+    } catch (err) {
+      console.error("Failed to load workflow state", err);
+      setError("Failed to load workflow definition");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const fetchedNodes = await getWorkflowNodes();
-        const fetchedEdges = await getWorkflowEdges();
-        setNodes(fetchedNodes);
-        setEdges(fetchedEdges);
-      } catch (err) {
-        console.error("Failed to load workflow state", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadData();
+    const timeoutId = globalThis.setTimeout(() => {
+      void loadData(false);
+    }, 0);
+
+    return () => globalThis.clearTimeout(timeoutId);
   }, []);
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
@@ -68,7 +82,10 @@ export function useWorkflowState() {
     try {
       const result = await serviceValidateWorkflow();
       if (result.success) {
-        triggerToast("Workflow schema compiled! 18 nodes validated successfully with 0 cycles errors.", "success");
+        triggerToast(
+          "Workflow schema compiled! 18 nodes validated successfully with 0 cycles errors.",
+          "success"
+        );
       } else {
         triggerToast(`Validation failed: ${result.errors.join(", ")}`, "warning");
       }
@@ -85,7 +102,10 @@ export function useWorkflowState() {
     try {
       const result = await serviceSimulateWorkflow();
       if (result.success) {
-        triggerToast("Workflow simulation completed successfully! 24 steps executed, 0 bottlenecks detected.", "success");
+        triggerToast(
+          "Workflow simulation completed successfully! 24 steps executed, 0 bottlenecks detected.",
+          "success"
+        );
       }
     } catch (err) {
       console.error("Simulation crashed", err);
@@ -98,7 +118,10 @@ export function useWorkflowState() {
     try {
       const result = await servicePublishWorkflow();
       if (result.success) {
-        triggerToast(`Workflow 'Default Autonomous Delivery Flow' published as ${result.version}! Active agent workers successfully updated.`, "success");
+        triggerToast(
+          `Workflow 'Default Autonomous Delivery Flow' published as ${result.version}! Active agent workers successfully updated.`,
+          "success"
+        );
       }
     } catch (err) {
       console.error("Publishing crashed", err);
@@ -109,6 +132,8 @@ export function useWorkflowState() {
     nodes,
     edges,
     loading,
+    error,
+    retry: loadData,
     selectedNodeId,
     setSelectedNodeId,
     selectedNode,

@@ -1,13 +1,13 @@
 import React from "react";
-import { 
-  Plus, 
-  Lightbulb, 
-  CheckSquare, 
-  RefreshCw, 
-  Eye, 
-  CheckCircle2, 
+import {
+  Plus,
+  Lightbulb,
+  CheckSquare,
+  RefreshCw,
+  Eye,
+  CheckCircle2,
   Play,
-  HelpCircle
+  HelpCircle,
 } from "lucide-react";
 import { TaskStatus } from "../../types/board";
 import { useBoardState } from "../../hooks/useBoardState";
@@ -23,6 +23,9 @@ export default function BoardPage({ searchQuery }: BoardPageProps) {
   const {
     tasks,
     events,
+    loading,
+    error,
+    retry,
     selectedTaskId,
     setSelectedTaskId,
     selectedTask,
@@ -43,51 +46,80 @@ export default function BoardPage({ searchQuery }: BoardPageProps) {
 
   // Kanban Columns Definition
   const COLUMNS: Array<{ id: TaskStatus; label: string; icon: React.ReactNode; color: string }> = [
-    { 
-      id: "idea", 
-      label: "Idea", 
-      icon: <Lightbulb className="w-4 h-4 text-amber-500 animate-pulse" />, 
-      color: "border-t-amber-400" 
+    {
+      id: "idea",
+      label: "Idea",
+      icon: <Lightbulb className="w-4 h-4 text-amber-500 animate-pulse" />,
+      color: "border-t-amber-400",
     },
-    { 
-      id: "ready_for_implementation", 
-      label: "Ready for Implementation", 
-      icon: <Play className="w-4 h-4 text-sky-500" />, 
-      color: "border-t-sky-400" 
+    {
+      id: "ready_for_implementation",
+      label: "Ready for Implementation",
+      icon: <Play className="w-4 h-4 text-sky-500" />,
+      color: "border-t-sky-400",
     },
-    { 
-      id: "to_do", 
-      label: "To Do", 
-      icon: <CheckSquare className="w-4 h-4 text-indigo-500" />, 
-      color: "border-t-indigo-400" 
+    {
+      id: "to_do",
+      label: "To Do",
+      icon: <CheckSquare className="w-4 h-4 text-indigo-500" />,
+      color: "border-t-indigo-400",
     },
-    { 
-      id: "in_progress", 
-      label: "In Progress", 
-      icon: <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" style={{ animationDuration: "12s" }} />, 
-      color: "border-t-blue-500" 
+    {
+      id: "in_progress",
+      label: "In Progress",
+      icon: (
+        <RefreshCw
+          className="w-4 h-4 text-blue-500 animate-spin"
+          style={{ animationDuration: "12s" }}
+        />
+      ),
+      color: "border-t-blue-500",
     },
-    { 
-      id: "feedback_required", 
-      label: "Feedback Required", 
-      icon: <HelpCircle className="w-4 h-4 text-purple-500" />, 
-      color: "border-t-purple-500" 
+    {
+      id: "feedback_required",
+      label: "Feedback Required",
+      icon: <HelpCircle className="w-4 h-4 text-purple-500" />,
+      color: "border-t-purple-500",
     },
-    { 
-      id: "in_review", 
-      label: "In Review", 
-      icon: <Eye className="w-4 h-4 text-pink-500" />, 
-      color: "border-t-pink-500" 
+    {
+      id: "in_review",
+      label: "In Review",
+      icon: <Eye className="w-4 h-4 text-pink-500" />,
+      color: "border-t-pink-500",
     },
-    { 
-      id: "done", 
-      label: "Done", 
-      icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" />, 
-      color: "border-t-emerald-500" 
-    }
+    {
+      id: "done",
+      label: "Done",
+      icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" />,
+      color: "border-t-emerald-500",
+    },
   ];
 
-  const countInProgress = tasks.filter(t => t.status === "in_progress").length;
+  const countInProgress = tasks.filter((t) => t.status === "in_progress").length;
+
+  if (loading) {
+    return (
+      <div className="flex-1 bg-[#F3F4F6] p-6 text-sm font-semibold text-slate-500">
+        Loading board...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex-1 bg-[#F3F4F6] p-6">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 shadow-sm">
+          <p className="font-bold">{error}</p>
+          <button
+            onClick={() => void retry()}
+            className="mt-3 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-[#F3F4F6]">
@@ -100,15 +132,13 @@ export default function BoardPage({ searchQuery }: BoardPageProps) {
             const isDraggedOver = draggedOverColumn === col.id;
 
             return (
-              <div 
+              <div
                 key={col.id}
                 onDragOver={(e) => handleDragOver(e, col.id)}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, col.id)}
                 className={`w-64 flex flex-col max-h-full transition-all duration-150 relative shrink-0 rounded-lg p-1 ${
-                  isDraggedOver 
-                    ? "bg-slate-200/50 ring-2 ring-blue-500/20" 
-                    : ""
+                  isDraggedOver ? "bg-slate-200/50 ring-2 ring-blue-500/20" : ""
                 }`}
               >
                 {/* Column Header */}
@@ -125,16 +155,18 @@ export default function BoardPage({ searchQuery }: BoardPageProps) {
 
                   <div className="flex items-center gap-1">
                     {col.id === "in_progress" && (
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${
-                        countInProgress > 3 
-                          ? "bg-red-50 text-red-700 border-red-200" 
-                          : "bg-blue-50 text-blue-700 border-blue-200"
-                      }`}>
+                      <span
+                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${
+                          countInProgress > 3
+                            ? "bg-red-50 text-red-700 border-red-200"
+                            : "bg-blue-50 text-blue-700 border-blue-200"
+                        }`}
+                      >
                         WIP {countInProgress} / 3
                       </span>
                     )}
 
-                    <button 
+                    <button
                       onClick={() => setActiveAddColumn(activeAddColumn === col.id ? null : col.id)}
                       className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
                       aria-label={`Add task to ${col.label}`}
@@ -149,9 +181,9 @@ export default function BoardPage({ searchQuery }: BoardPageProps) {
                   {/* Task adding overlay widget */}
                   {activeAddColumn === col.id && (
                     <div className="p-3 border border-slate-200 rounded-lg bg-white shadow-xs space-y-2 animate-in fade-in duration-150">
-                      <input 
-                        type="text" 
-                        placeholder="Task title..." 
+                      <input
+                        type="text"
+                        placeholder="Task title..."
                         value={newCardTitle}
                         onChange={(e) => setNewCardTitle(e.target.value)}
                         className="w-full text-xs font-semibold px-2 py-1 bg-slate-50 border border-slate-200 rounded outline-none focus:bg-white"
@@ -160,13 +192,13 @@ export default function BoardPage({ searchQuery }: BoardPageProps) {
                         }}
                       />
                       <div className="flex gap-1.5 justify-end">
-                        <button 
+                        <button
                           onClick={() => setActiveAddColumn(null)}
                           className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-[10px] font-bold text-slate-500 cursor-pointer"
                         >
                           Cancel
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleAddCard(col.id)}
                           className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-bold cursor-pointer"
                         >
@@ -177,14 +209,14 @@ export default function BoardPage({ searchQuery }: BoardPageProps) {
                   )}
 
                   {columnTasks.map((task) => (
-                    <div 
+                    <div
                       key={task.id}
                       draggable={true}
                       onDragStart={(e) => handleDragStart(e, task.id)}
                       className="active:cursor-grabbing transition-transform"
                     >
-                      <TaskCard 
-                        card={task} 
+                      <TaskCard
+                        card={task}
                         isSelected={selectedTaskId === task.id}
                         onClick={() => setSelectedTaskId(task.id)}
                         onSelectOption={handleSelectOption}
@@ -194,13 +226,15 @@ export default function BoardPage({ searchQuery }: BoardPageProps) {
 
                   {columnTasks.length === 0 && !activeAddColumn && (
                     <div className="h-28 border border-dashed border-slate-200 rounded-lg bg-white/45 flex flex-col items-center justify-center text-slate-400 p-4">
-                      <span className="text-[10px] font-medium leading-normal">Drag tasks here</span>
+                      <span className="text-[10px] font-medium leading-normal">
+                        Drag tasks here
+                      </span>
                     </div>
                   )}
                 </div>
 
                 {/* Quick Add card bottom link */}
-                <button 
+                <button
                   onClick={() => setActiveAddColumn(activeAddColumn === col.id ? null : col.id)}
                   className="mt-2.5 p-2 hover:bg-white border border-transparent hover:border-slate-200 hover:shadow-xs rounded-lg text-slate-500 hover:text-slate-800 transition-all flex items-center justify-center gap-1 text-xs font-bold cursor-pointer text-center shrink-0"
                   aria-label={`Add task to ${col.label} column`}
@@ -215,7 +249,7 @@ export default function BoardPage({ searchQuery }: BoardPageProps) {
 
         {/* Sliding Right-side Drawer */}
         {selectedTask && (
-          <TaskDetailDrawer 
+          <TaskDetailDrawer
             key={selectedTask.id}
             task={selectedTask}
             onClose={() => setSelectedTaskId(null)}
