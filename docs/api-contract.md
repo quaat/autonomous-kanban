@@ -24,3 +24,19 @@ No current implementation performs real worker execution, LLM calls, authenticat
 | POST | `/api/workflow/publish` | None | `PublishWorkflowResultDto` | Returns a mock version string. | Returns a deterministic session-local mock version string. | Create immutable workflow versions and deployment audit records. |
 
 DTO definitions live in `src/api/dto.ts`. UI/domain models remain in `src/types` and are bridged through `src/api/mappers.ts`.
+
+
+## Validation and Error Behavior
+
+The fixture server validates mutation request bodies before changing in-memory state:
+
+- `400 Bad Request`: malformed JSON, non-object mutation bodies, missing required create fields, invalid task status/priority values, invalid activity event types, invalid numeric fields, invalid string-array fields, invalid workflow node positions, or invalid workflow node config objects.
+- `404 Not Found`: unknown route, unknown task ID for task update/move, or unknown workflow node ID for node update.
+- `405 Method Not Allowed`: recognized endpoint path with an unsupported HTTP method.
+- `500 Internal Server Error`: unexpected fixture server failures only; invalid user payloads are reported as `400`, not collapsed into generic server errors.
+
+Patch endpoints treat the path ID as authoritative. If a task or workflow-node patch body includes `id`, the fixture server ignores that body field and preserves the path ID.
+
+The HTTP client validates response shapes at runtime before returning DTOs to services. Invalid enum/union values, missing required fields, or incorrectly typed optional fields cause `ApiError("HTTP_RESPONSE_INVALID", ...)`. Non-2xx HTTP responses are converted into typed `ApiError` instances such as `HTTP_NOT_FOUND` or `HTTP_SERVER_ERROR`.
+
+Request timeout behavior is client-side. `HttpAutonomousDevelopmentApiClient` uses `AbortController`, defaults to `10000ms`, can be configured with `VITE_API_TIMEOUT_MS`, and throws `ApiError("HTTP_TIMEOUT", ...)` when a request exceeds the configured timeout.

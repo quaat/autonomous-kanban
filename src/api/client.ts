@@ -13,7 +13,7 @@ import type {
   WorkflowValidationResultDto,
 } from "./dto";
 import { ApiError } from "./errors";
-import { HttpAutonomousDevelopmentApiClient } from "./httpApiClient";
+import { HttpAutonomousDevelopmentApiClient, normalizeTimeoutMs } from "./httpApiClient";
 import { MockAutonomousDevelopmentApiClient } from "./mockApiClient";
 
 export interface AutonomousDevelopmentApiClient {
@@ -38,7 +38,7 @@ let apiClient: AutonomousDevelopmentApiClient | null = null;
 
 export function createApiClientForMode(
   apiMode: string | undefined,
-  options?: { baseUrl?: string }
+  options?: { baseUrl?: string; timeoutMs?: number }
 ): AutonomousDevelopmentApiClient {
   const resolvedApiMode = apiMode ?? "mock";
 
@@ -49,6 +49,9 @@ export function createApiClientForMode(
   if (resolvedApiMode === "http") {
     return new HttpAutonomousDevelopmentApiClient({
       baseUrl: options?.baseUrl ?? import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5174",
+      timeoutMs: normalizeTimeoutMs(
+        options?.timeoutMs ?? Number(import.meta.env.VITE_API_TIMEOUT_MS ?? 10_000)
+      ),
     });
   }
 

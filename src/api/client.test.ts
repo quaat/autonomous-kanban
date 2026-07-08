@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createApiClientForMode } from "./client";
 import { ApiError } from "./errors";
-import { HttpAutonomousDevelopmentApiClient } from "./httpApiClient";
+import { DEFAULT_HTTP_TIMEOUT_MS, HttpAutonomousDevelopmentApiClient } from "./httpApiClient";
 import { MockAutonomousDevelopmentApiClient } from "./mockApiClient";
 
 describe("API client factory", () => {
@@ -17,10 +17,22 @@ describe("API client factory", () => {
     expect(createApiClientForMode("http")).toBeInstanceOf(HttpAutonomousDevelopmentApiClient);
   });
 
-  it("passes an explicit base URL to the HTTP client", () => {
+  it("passes and normalizes an explicit base URL to the HTTP client", () => {
     const client = createApiClientForMode("http", { baseUrl: "http://example.test/" });
     expect(client).toBeInstanceOf(HttpAutonomousDevelopmentApiClient);
     expect((client as HttpAutonomousDevelopmentApiClient).baseUrl).toBe("http://example.test");
+  });
+
+  it("passes an explicit timeout to the HTTP client", () => {
+    const client = createApiClientForMode("http", { baseUrl: "http://example.test", timeoutMs: 1234 });
+    expect(client).toBeInstanceOf(HttpAutonomousDevelopmentApiClient);
+    expect((client as HttpAutonomousDevelopmentApiClient).timeoutMs).toBe(1234);
+  });
+
+  it("falls back safely for invalid explicit timeouts", () => {
+    const client = createApiClientForMode("http", { baseUrl: "http://example.test", timeoutMs: Number.NaN });
+    expect(client).toBeInstanceOf(HttpAutonomousDevelopmentApiClient);
+    expect((client as HttpAutonomousDevelopmentApiClient).timeoutMs).toBe(DEFAULT_HTTP_TIMEOUT_MS);
   });
 
   it("unknown mode throws a typed unsupported-mode API error", () => {

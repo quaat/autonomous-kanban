@@ -1,22 +1,39 @@
-import type { AddressInfo } from "node:net";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { Server } from "node:http";
 import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createFixtureServer } from "../../scripts/fixture-server.mjs";
 import { ApiError } from "./errors";
 import { HttpAutonomousDevelopmentApiClient } from "./httpApiClient";
 
-let server: Awaited<ReturnType<typeof createFixtureServer>>;
+let server: Server;
 let client: HttpAutonomousDevelopmentApiClient;
 
-beforeAll(async () => {
+async function listen(testServer: Server): Promise<string> {
+  await new Promise<void>((resolve) => testServer.listen(0, "127.0.0.1", resolve));
+  const { port } = testServer.address() as AddressInfo;
+  return `http://127.0.0.1:${port}`;
+}
+
+async function close(testServer: Server): Promise<void> {
+  await new Promise<void>((resolve, reject) => testServer.close((error) => (error ? reject(error) : resolve())));
+}
+
+function jsonServer(payload: unknown, status = 200): Server {
+  return createServer((_req, res) => {
+    res.writeHead(status, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(payload));
+  });
+}
+
+beforeEach(async () => {
   server = await createFixtureServer();
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const { port } = server.address() as AddressInfo;
-  client = new HttpAutonomousDevelopmentApiClient({ baseUrl: `http://127.0.0.1:${port}` });
+  const baseUrl = await listen(server);
+  client = new HttpAutonomousDevelopmentApiClient({ baseUrl });
 });
 
-afterAll(async () => {
-  await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+afterEach(async () => {
+  await close(server);
 });
 
 describe("HttpAutonomousDevelopmentApiClient", () => {
@@ -84,41 +101,112 @@ describe("HttpAutonomousDevelopmentApiClient", () => {
     await expect(client.publishWorkflow()).resolves.toEqual(expect.objectContaining({ success: true, version: expect.stringMatching(/^v/) }));
   });
 
-  it("invalid response shape throws HTTP_RESPONSE_INVALID", async () => {
-    const invalidServer = createServer((_req, res) => {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ not: "tasks" }));
-    });
-    await new Promise<void>((resolve) => invalidServer.listen(0, "127.0.0.1", resolve));
-    const { port } = invalidServer.address() as AddressInfo;
-    const invalidClient = new HttpAutonomousDevelopmentApiClient({ baseUrl: `http://127.0.0.1:${port}` });
+  it("server returns task with invalid status -> HTTP_RESPONSE_INVALID", async () => {
+    const invalidServer = jsonServer([{ id: "task-x", title: "Bad", status: "bogus", priority: "medium", labels: [] }]);
+    const invalidClient = new HttpAutonomousDevelopmentApiClient({ baseUrl: await listen(invalidServer) });
     await expect(invalidClient.listTasks()).rejects.toMatchObject({ code: "HTTP_RESPONSE_INVALID" });
-    await new Promise<void>((resolve, reject) => invalidServer.close((error) => (error ? reject(error) : resolve())));
+    await close(invalidServer);
   });
 
-  it("fixture server returns JSON for GET /api/tasks", async () => {
+  it("server returns task with invalid priority -> HTTP_RESPONSE_INVALID", async () => {
+    const invalidServer = jsonServer([{ id: "task-x", title: "Bad", status: "idea", priority: "urgent", labels: [] }]);
+    const invalidClient = new HttpAutonomousDevelopmentApiClient({ baseUrl: await listen(invalidServer) });
+    await expect(invalidClient.listTasks()).rejects.toMatchObject({ code: "HTTP_RESPONSE_INVALID" });
+    await close(invalidServer);
+  });
+
+  it("server returns activity event with invalid type -> HTTP_RESPONSE_INVALID", async () => {
+    const invalidServer = jsonServer([{ id: "evt-x", time: "now", type: "bogus", message: "Bad" }]);
+    const invalidClient = new HttpAutonomousDevelopmentApiClient({ baseUrl: await listen(invalidServer) });
+    await expect(invalidClient.listActivityEvents()).rejects.toMatchObject({ code: "HTTP_RESPONSE_INVALID" });
+    await close(invalidServer);
+  });
+
+  it("server returns workflow node with invalid type -> HTTP_RESPONSE_INVALID", async () => {
+    const invalidServer = jsonServer([{ id: "node-x", type: "bogus", label: "Bad", position: { x: 0, y: 0 } }]);
+    const invalidClient = new HttpAutonomousDevelopmentApiClient({ baseUrl: await listen(invalidServer) });
+    await expect(invalidClient.listWorkflowNodes()).rejects.toMatchObject({ code: "HTTP_RESPONSE_INVALID" });
+    await close(invalidServer);
+  });
+
+  it("server returns workflow edge with invalid variant -> HTTP_RESPONSE_INVALID", async () => {
+    const invalidServer = jsonServer([{ id: "edge-x", source: "a", target: "b", variant: "bogus" }]);
+    const invalidClient = new HttpAutonomousDevelopmentApiClient({ baseUrl: await listen(invalidServer) });
+    await expect(invalidClient.listWorkflowEdges()).rejects.toMatchObject({ code: "HTTP_RESPONSE_INVALID" });
+    await close(invalidServer);
+  });
+
+  it("timeout causes HTTP_TIMEOUT", async () => {
+    const slowServer = createServer((_req, res) => {
+      globalThis.setTimeout(() => res.end(JSON.stringify([])), 50);
+    });
+    const slowClient = new HttpAutonomousDevelopmentApiClient({ baseUrl: await listen(slowServer), timeoutMs: 1 });
+    await expect(slowClient.listTasks()).rejects.toMatchObject({ code: "HTTP_TIMEOUT" });
+    await close(slowServer);
+  });
+
+  it("non-timeout network failure still causes HTTP_REQUEST_FAILED", async () => {
+    const failingClient = new HttpAutonomousDevelopmentApiClient({ baseUrl: "http://127.0.0.1:1", timeoutMs: 5_000 });
+    await expect(failingClient.listTasks()).rejects.toBeInstanceOf(ApiError);
+    await expect(failingClient.listTasks()).rejects.toMatchObject({ code: "HTTP_REQUEST_FAILED" });
+  });
+});
+
+describe("fixture server validation", () => {
+  async function post(path: string, body: unknown, method = "POST"): Promise<Response> {
+    return fetch(`${client.baseUrl}${path}`, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: typeof body === "string" ? body : JSON.stringify(body),
+    });
+  }
+
+  it("GET /api/tasks returns JSON", async () => {
     const response = await fetch(`${client.baseUrl}/api/tasks`);
     expect(response.headers.get("content-type")).toContain("application/json");
     await expect(response.json()).resolves.toEqual(expect.any(Array));
   });
 
-  it("fixture server returns 404 for unknown routes", async () => {
+  it("POST /api/tasks with missing title returns 400", async () => {
+    await expect(post("/api/tasks", { status: "idea" }).then((response) => response.status)).resolves.toBe(400);
+  });
+
+  it("POST /api/tasks with invalid status returns 400", async () => {
+    await expect(post("/api/tasks", { title: "Bad", status: "bogus" }).then((response) => response.status)).resolves.toBe(400);
+  });
+
+  it("POST /api/tasks/{id}/move with invalid status returns 400", async () => {
+    await expect(post("/api/tasks/task-1/move", { status: "bogus" }).then((response) => response.status)).resolves.toBe(400);
+  });
+
+  it("POST /api/activity-events with missing message returns 400", async () => {
+    await expect(post("/api/activity-events", { time: "now", type: "info" }).then((response) => response.status)).resolves.toBe(400);
+  });
+
+  it("PATCH /api/tasks/{id} with id in body does not change task ID", async () => {
+    const response = await post("/api/tasks/task-1", { id: "changed", title: "Still task-1" }, "PATCH");
+    await expect(response.json()).resolves.toEqual(expect.objectContaining({ id: "task-1", title: "Still task-1" }));
+  });
+
+  it("PATCH /api/workflow/nodes/{id} with invalid position returns 400", async () => {
+    await expect(post("/api/workflow/nodes/start-node", { position: { x: "nope", y: 0 } }, "PATCH").then((response) => response.status)).resolves.toBe(400);
+  });
+
+  it("malformed JSON returns 400", async () => {
+    await expect(post("/api/tasks", "{not-json").then((response) => response.status)).resolves.toBe(400);
+  });
+
+  it("unexpected routes still return 404", async () => {
     await expect(fetch(`${client.baseUrl}/api/unknown`).then((response) => response.status)).resolves.toBe(404);
   });
 
-  it("fixture server returns 405 for unsupported methods", async () => {
+  it("unsupported methods still return 405", async () => {
     await expect(fetch(`${client.baseUrl}/api/tasks`, { method: "PATCH" }).then((response) => response.status)).resolves.toBe(405);
   });
 
-  it("fixture server responds to CORS preflight", async () => {
+  it("CORS preflight still works", async () => {
     const response = await fetch(`${client.baseUrl}/api/tasks`, { method: "OPTIONS" });
     expect(response.status).toBe(204);
     expect(response.headers.get("access-control-allow-origin")).toBe("*");
-  });
-
-  it("request failures throw typed ApiError", async () => {
-    const failingClient = new HttpAutonomousDevelopmentApiClient({ baseUrl: "http://127.0.0.1:1" });
-    await expect(failingClient.listTasks()).rejects.toBeInstanceOf(ApiError);
-    await expect(failingClient.listTasks()).rejects.toMatchObject({ code: "HTTP_REQUEST_FAILED" });
   });
 });

@@ -27,14 +27,18 @@ import {
   isWorkflowValidationResultDto,
 } from "./validation";
 
-export type HttpApiClientOptions = { baseUrl: string };
+export const DEFAULT_HTTP_TIMEOUT_MS = 10_000;
+
+export type HttpApiClientOptions = { baseUrl: string; timeoutMs?: number };
 type Guard<T> = (value: unknown) => value is T;
 
 export class HttpAutonomousDevelopmentApiClient implements AutonomousDevelopmentApiClient {
   public readonly baseUrl: string;
+  public readonly timeoutMs: number;
 
   constructor(options: HttpApiClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, "");
+    this.timeoutMs = normalizeTimeoutMs(options.timeoutMs);
   }
 
   listTasks(): Promise<TaskDto[]> {
@@ -86,11 +90,26 @@ export class HttpAutonomousDevelopmentApiClient implements AutonomousDevelopment
 
   private async request<T>(path: string, init: RequestInit, guard: Guard<T>): Promise<T> {
     const endpoint = `${this.baseUrl}${path}`;
+    const controller = new AbortController();
+    const timeoutId = globalThis.setTimeout(() => controller.abort(), this.timeoutMs);
     let response: Response;
     try {
-      response = await fetch(endpoint, { ...init, headers: { Accept: "application/json", ...init.headers } });
+      response = await fetch(endpoint, {
+        ...init,
+        headers: { Accept: "application/json", ...init.headers },
+        signal: controller.signal,
+      });
     } catch (error) {
+      if (controller.signal.aborted) {
+        throw new ApiError(
+          "HTTP_TIMEOUT",
+          `HTTP request to ${path} timed out after ${this.timeoutMs}ms`,
+          error
+        );
+      }
       throw new ApiError("HTTP_REQUEST_FAILED", `HTTP request to ${path} failed`, error);
+    } finally {
+      globalThis.clearTimeout(timeoutId);
     }
     if (!response.ok) {
       throw apiErrorFromHttpResponse(response, await this.errorMessage(response, path));
@@ -119,4 +138,11 @@ export class HttpAutonomousDevelopmentApiClient implements AutonomousDevelopment
     }
     return prefix;
   }
+}
+
+export function normalizeTimeoutMs(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return DEFAULT_HTTP_TIMEOUT_MS;
+  }
+  return value;
 }

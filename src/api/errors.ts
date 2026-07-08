@@ -5,7 +5,8 @@ export type ApiErrorCode =
   | "HTTP_REQUEST_FAILED"
   | "HTTP_RESPONSE_INVALID"
   | "HTTP_NOT_FOUND"
-  | "HTTP_SERVER_ERROR";
+  | "HTTP_SERVER_ERROR"
+  | "HTTP_TIMEOUT";
 
 export class ApiError extends Error {
   constructor(
