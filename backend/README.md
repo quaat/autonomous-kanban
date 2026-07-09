@@ -1,12 +1,12 @@
 # Autonomous Kanban FastAPI Backend
 
-This is a minimal, contract-only FastAPI backend for local development against the existing frontend HTTP API boundary.
+This is a minimal FastAPI backend for local development against the existing frontend HTTP API boundary.
 
-The application is created through `create_app()` in `app/main.py`. Uvicorn still uses the module-level `app`, while tests can call `create_app(repository=InMemoryRepository())` for isolated state. The repository is attached at `app.state.repository`, and routers resolve it through FastAPI dependency injection.
+The application is created through `create_app()` in `app/main.py`. Uvicorn still uses the module-level `app`, while tests can call `create_app(repository=InMemoryRepository())` or inject a SQL-backed repository for isolated state. The repository is attached at `app.state.repository`, and routers resolve it through FastAPI dependency injection.
 
 It is intentionally:
 
-- in-memory and non-durable
+- memory-backed by default, with an opt-in durable SQLite repository
 - unauthenticated
 - local/development oriented
 - seeded from the root `fixtures/*.json` files
@@ -19,6 +19,24 @@ cd backend
 python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
+```
+
+
+## Persistence
+
+The backend supports two repository modes:
+
+```bash
+BACKEND_REPOSITORY=memory  # default, resets to fixtures on process start
+BACKEND_REPOSITORY=sqlite  # durable local SQLite persistence
+DATABASE_URL=sqlite:///./dev.db
+```
+
+The SQLite repository seeds an empty database from the root `fixtures/*.json` files and stores tasks, activity events, workflow nodes, workflow edges, and publish state. Alembic migrations can create the schema from scratch:
+
+```bash
+cd backend
+DATABASE_URL=sqlite:///./dev.db python -m alembic upgrade head
 ```
 
 ## Run
