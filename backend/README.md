@@ -2,6 +2,8 @@
 
 This is a minimal, contract-only FastAPI backend for local development against the existing frontend HTTP API boundary.
 
+The application is created through `create_app()` in `app/main.py`. Uvicorn still uses the module-level `app`, while tests can call `create_app(repository=InMemoryRepository())` for isolated state. The repository is attached at `app.state.repository`, and routers resolve it through FastAPI dependency injection.
+
 It is intentionally:
 
 - in-memory and non-durable
@@ -36,6 +38,7 @@ VITE_API_MODE=http VITE_API_BASE_URL=http://localhost:8000 npm run dev
 
 ```bash
 cd backend
+python -m ruff check app tests
 python -m pytest
 ```
 
@@ -51,7 +54,7 @@ python -m pytest
 - `POST /api/activity-events`
 - `GET /api/workflow/nodes`
 - `GET /api/workflow/edges`
-- `PATCH /api/workflow/nodes/{id}`
+- `PATCH /api/workflow/nodes/{id}` (`label`, `subtitle`, `position`, and `config` only; `type` is not patchable)
 - `POST /api/workflow/validate`
 - `POST /api/workflow/simulate`
 - `POST /api/workflow/publish`

@@ -1,3 +1,12 @@
+def assert_error_body(response, expected_code=None):
+    body = response.json()
+    assert set(body) == {"code", "message"}
+    if expected_code is not None:
+        assert body["code"] == expected_code
+    assert isinstance(body["message"], str)
+    assert body["message"]
+
+
 def test_get_workflow_nodes_and_edges(client):
     nodes = client.get("/api/workflow/nodes")
     edges = client.get("/api/workflow/edges")
@@ -24,8 +33,18 @@ def test_patch_workflow_node_merges_config_and_preserves_id(client):
 
 
 def test_patch_workflow_node_missing_and_invalid_position(client):
-    assert client.patch("/api/workflow/nodes/missing", json={"label": "x"}).status_code == 404
-    assert client.patch("/api/workflow/nodes/start-node", json={"position": {"x": "bad", "y": 2}}).status_code == 400
+    missing = client.patch("/api/workflow/nodes/missing", json={"label": "x"})
+    invalid_position = client.patch("/api/workflow/nodes/start-node", json={"position": {"x": "bad", "y": 2}})
+    assert missing.status_code == 404
+    assert_error_body(missing, "WORKFLOW_NODE_NOT_FOUND")
+    assert invalid_position.status_code == 400
+    assert_error_body(invalid_position, "INVALID_REQUEST")
+
+
+def test_patch_workflow_node_rejects_type_changes(client):
+    response = client.patch("/api/workflow/nodes/start-node", json={"type": "end"})
+    assert response.status_code == 400
+    assert_error_body(response, "INVALID_REQUEST")
 
 
 def test_validate_simulate_publish(client):

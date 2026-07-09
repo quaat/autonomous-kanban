@@ -1,14 +1,11 @@
 from fastapi import APIRouter, Depends, status
 
+from ..dependencies import get_repository
 from ..repository import InMemoryRepository
 from ..schemas import CreateTaskRequestDto, MoveTaskRequestDto, TaskDto, UpdateTaskRequestDto
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
-
-def get_repository() -> InMemoryRepository:
-    from ..main import repository
-    return repository
 
 
 @router.get("", response_model=list[TaskDto], response_model_exclude_none=True)

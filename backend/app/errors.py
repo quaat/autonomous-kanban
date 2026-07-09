@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+logger = logging.getLogger(__name__)
+
 
 class ApiError(Exception):
     def __init__(self, status_code: int, code: str, message: str) -> None:
+        super().__init__(message)
         self.status_code = status_code
         self.code = code
         self.message = message
@@ -35,5 +40,6 @@ def install_error_handlers(app: FastAPI) -> None:
         return error_response(exc.status_code, "INVALID_REQUEST", str(exc.detail))
 
     @app.exception_handler(Exception)
-    async def unhandled_error_handler(_request: Request, _exc: Exception) -> JSONResponse:
+    async def unhandled_error_handler(_request: Request, exc: Exception) -> JSONResponse:
+        logger.exception("Unhandled backend error", exc_info=exc)
         return error_response(status.HTTP_500_INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "Internal server error")

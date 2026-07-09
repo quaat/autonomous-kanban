@@ -1,14 +1,11 @@
 from fastapi import APIRouter, Depends
 
+from ..dependencies import get_repository
 from ..repository import InMemoryRepository
 from ..schemas import PublishWorkflowResultDto, UpdateWorkflowNodeRequestDto, WorkflowEdgeDto, WorkflowNodeDto, WorkflowSimulationResultDto, WorkflowValidationResultDto
 
 router = APIRouter(prefix="/api/workflow", tags=["workflow"])
 
-
-def get_repository() -> InMemoryRepository:
-    from ..main import repository
-    return repository
 
 
 @router.get("/nodes", response_model=list[WorkflowNodeDto], response_model_exclude_none=True)

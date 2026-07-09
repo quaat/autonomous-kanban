@@ -16,7 +16,9 @@
     "fixture-server": "node scripts/fixture-server.mjs",
     "backend:dev": "cd backend && python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000",
     "dev:backend": "VITE_API_MODE=http VITE_API_BASE_URL=http://localhost:8000 vite --port=3000 --host=0.0.0.0",
-    "backend:test": "cd backend && python -m pytest"
+    "backend:test": "cd backend && python -m pytest",
+    "backend:lint": "cd backend && python -m ruff check app tests",
+    "backend:check": "npm run backend:lint && npm run backend:test"
   },
   "dependencies": {
     "lucide-react": "^0.546.0",

@@ -47,7 +47,7 @@ VITE_API_TIMEOUT_MS=10000
 ```
 
 The POSIX-style environment variables used by `dev:http` and `dev:backend` match this Linux-oriented development environment. Tests use isolated mock, fixture HTTP, or FastAPI clients via explicit state reset helpers.
-FastAPI contract backend mode is available as the first real backend-shaped implementation. It uses the same in-memory fixture data, exposes OpenAPI at `http://localhost:8000/openapi.json`, and remains non-production/non-durable.
+FastAPI contract backend mode is available as the first real backend-shaped implementation. It uses the same in-memory fixture data, exposes OpenAPI at `http://localhost:8000/openapi.json`, and remains non-production/non-durable. The backend exposes `create_app()` from `backend/app/main.py`, attaches repository state to `app.state.repository`, and routes access it through FastAPI dependency injection rather than module-global state.
 
 ```bash
 cd backend
@@ -65,7 +65,7 @@ Current modes:
 2. **Node fixture HTTP server**: `npm run fixture-server` plus `npm run dev:http` uses `scripts/fixture-server.mjs`.
 3. **FastAPI contract backend**: `npm run backend:dev` plus `npm run dev:backend` uses `backend/app/main.py`.
 
-The fixture server and FastAPI backend are intentionally local and in-memory: they have no production database, authentication, worker execution, LLM calls, GitHub/repository side effects, or durable persistence.
+The fixture server and FastAPI backend are intentionally local and in-memory: they have no production database, authentication, worker execution, LLM calls, GitHub/repository side effects, or durable persistence. Workflow-node patches intentionally support editable `label`, `subtitle`, `position`, and `config` fields only; node `type` is not patchable in the FastAPI contract backend.
 
 
 ---

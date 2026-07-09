@@ -1,6 +1,15 @@
+def assert_error_body(response, expected_code=None):
+    body = response.json()
+    assert set(body) == {"code", "message"}
+    if expected_code is not None:
+        assert body["code"] == expected_code
+    assert isinstance(body["message"], str)
+    assert body["message"]
+
+
 def test_health_and_ready(client):
-    assert client.get("/healthz").status_code == 200
-    assert client.get("/readyz").status_code == 200
+    assert client.get("/healthz").json() == {"status": "ok"}
+    assert client.get("/readyz").json() == {"status": "ok", "repositoryLoaded": True}
 
 
 def test_get_tasks_returns_seeded_tasks(client):
@@ -19,9 +28,13 @@ def test_create_task(client):
     assert body["labels"] == []
 
 
-def test_create_task_validation_errors(client):
-    assert client.post("/api/tasks", json={"status": "to_do"}).status_code == 400
-    assert client.post("/api/tasks", json={"title": "Bad", "status": "invalid"}).status_code == 400
+def test_create_task_validation_errors_include_error_contract(client):
+    missing_title = client.post("/api/tasks", json={"status": "to_do"})
+    invalid_status = client.post("/api/tasks", json={"title": "Bad", "status": "invalid"})
+    assert missing_title.status_code == 400
+    assert_error_body(missing_title, "INVALID_REQUEST")
+    assert invalid_status.status_code == 400
+    assert_error_body(invalid_status, "INVALID_REQUEST")
 
 
 def test_patch_task_updates_and_preserves_path_id(client):
@@ -35,7 +48,7 @@ def test_patch_task_updates_and_preserves_path_id(client):
 def test_patch_missing_task(client):
     response = client.patch("/api/tasks/missing", json={"title": "Updated"})
     assert response.status_code == 404
-    assert response.json()["code"] == "TASK_NOT_FOUND"
+    assert_error_body(response, "TASK_NOT_FOUND")
 
 
 def test_move_task(client):
@@ -47,3 +60,4 @@ def test_move_task(client):
 def test_move_task_invalid_status(client):
     response = client.post("/api/tasks/task-1/move", json={"status": "invalid"})
     assert response.status_code == 400
+    assert_error_body(response, "INVALID_REQUEST")

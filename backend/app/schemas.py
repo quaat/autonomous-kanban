@@ -194,7 +194,6 @@ class WorkflowEdgeDto(ContractModel):
 
 class UpdateWorkflowNodeRequestDto(ContractModel):
     id: str | None = None
-    type: WorkflowNodeType | None = None
     label: str | None = None
     subtitle: str | None = None
     position: PositionDto | None = None
