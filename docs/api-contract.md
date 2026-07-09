@@ -4,11 +4,12 @@ The frontend has a typed API boundary shared by three implementation phases:
 
 - **Current mock client**: `src/api/mockApiClient.ts` runs fully in memory from `src/data` seeds.
 - **Current fixture HTTP server**: `scripts/fixture-server.mjs` exposes the same DTO contract over local HTTP using cloned `fixtures/*.json` state for a single server session.
-- **Future production backend**: a FastAPI or production service can replace the fixture server without changing UI components, hooks, or services.
+- **FastAPI contract backend**: `backend/app/main.py` exposes the same local HTTP contract using in-memory state seeded from `fixtures/*.json`.
+- **Future production backend**: a production service can replace these development implementations without changing UI components, hooks, or services.
 
-No current implementation performs real worker execution, LLM calls, authentication, database writes, or GitHub/repository automation.
+The same contract is now implemented by `src/api/mockApiClient.ts`, `scripts/fixture-server.mjs`, and `backend/app/main.py`. No current implementation performs real worker execution, LLM calls, authentication, database writes, durable persistence, or GitHub/repository automation. The FastAPI backend is local/development oriented, in-memory, non-durable, unauthenticated, not connected to real worker execution, not connected to LLMs, not connected to GitHub/repositories, and not backed by a production database.
 
-| Method | Path | Request DTO | Response DTO | Current mock client behavior | Current fixture HTTP behavior | Future backend expectation |
+| Method | Path | Request DTO | Response DTO | Current mock client behavior | Current fixture HTTP behavior | FastAPI contract backend / future expectation |
 | --- | --- | --- | --- | --- | --- | --- |
 | GET | `/api/tasks` | None | `TaskDto[]` | Returns cloned seeded board tasks. | Returns cloned in-memory tasks from `fixtures/tasks.json`. | Add auth scoping, pagination, and server-side filters if needed. |
 | POST | `/api/tasks` | `CreateTaskRequestDto` | `TaskDto` | Appends a task with supplied or generated `task-*` ID. | Appends a session-local task and returns `201`; invalid bodies return `400`. | Validate required fields, status, workflow rules, and project scope. |
