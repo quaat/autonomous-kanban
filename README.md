@@ -6,10 +6,10 @@ An autonomous development productivity platform mockup featuring interactive, hi
 
 ## 🔒 Scope & Mock API Boundary
 
-This application is a **frontend-only client-side mockup**.
+This application is a **local development mockup with three backend-facing modes**.
 
 - **No real backend integrations**: no production APIs, databases, authentication, GitHub/repository access, LLM providers, workers, or coding agents are contacted.
-- **Two current client modes**: UI components call hooks, hooks call services, and services call the typed API client interface. The default implementation is the in-memory `src/api/mockApiClient.ts`; `VITE_API_MODE=http` selects the production-shaped `src/api/httpApiClient.ts` against the local fixture server.
+- **Three current backend-facing modes**: UI components call hooks, hooks call services, and services call the typed API client interface. The default implementation is the in-memory `src/api/mockApiClient.ts`; `VITE_API_MODE=http` selects the production-shaped `src/api/httpApiClient.ts` against either the Node fixture server or the FastAPI contract backend.
 - **Typed API contract layer**: DTOs are defined separately from UI/domain types in `src/api/dto.ts`; mappers in `src/api/mappers.ts` keep the UI insulated from future backend DTO changes.
 - **API contract documentation**: intended future HTTP endpoints are documented in `docs/api-contract.md`.
 - **Local mock state**: the mock API uses seeded data from `src/data` and simulates network-compatible async calls with small latency.
@@ -23,7 +23,7 @@ npm run dev
 # equivalent to: VITE_API_MODE=mock npm run dev
 ```
 
-HTTP fixture mode is available for the first backend-facing integration slice. Start the fixture API in one terminal, then start Vite in HTTP mode from another terminal:
+HTTP fixture mode remains available as a lightweight backend-facing integration slice. Start the fixture API in one terminal, then start Vite in HTTP mode from another terminal:
 
 ```bash
 npm run fixture-server
@@ -46,7 +46,27 @@ VITE_API_BASE_URL=http://localhost:5174
 VITE_API_TIMEOUT_MS=10000
 ```
 
-The POSIX-style environment variables used by `dev:http` match this Linux-oriented development environment. The fixture backend is intentionally local and in-memory: it has no production database, authentication, worker execution, LLM calls, GitHub/repository side effects, or durable persistence. Tests use isolated mock or fixture HTTP clients via explicit factory reset/injection helpers.
+The POSIX-style environment variables used by `dev:http` and `dev:backend` match this Linux-oriented development environment. Tests use isolated mock, fixture HTTP, or FastAPI clients via explicit state reset helpers.
+FastAPI contract backend mode is available as the first real backend-shaped implementation. It uses the same in-memory fixture data, exposes OpenAPI at `http://localhost:8000/openapi.json`, and remains non-production/non-durable. The backend exposes `create_app()` from `backend/app/main.py`, attaches repository state to `app.state.repository`, and routes access it through FastAPI dependency injection rather than module-global state.
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+cd ..
+npm run backend:dev
+npm run dev:backend
+```
+
+Current modes:
+
+1. **In-memory frontend mock client**: `npm run dev` uses `src/api/mockApiClient.ts`.
+2. **Node fixture HTTP server**: `npm run fixture-server` plus `npm run dev:http` uses `scripts/fixture-server.mjs`.
+3. **FastAPI contract backend**: `npm run backend:dev` plus `npm run dev:backend` uses `backend/app/main.py`.
+
+The fixture server and FastAPI backend are intentionally local and in-memory: they have no production database, authentication, worker execution, LLM calls, GitHub/repository side effects, or durable persistence. Workflow-node patches intentionally support editable `label`, `subtitle`, `position`, and `config` fields only; node `type` is not patchable in the FastAPI contract backend.
+
 
 ---
 
@@ -106,7 +126,7 @@ Optimized assets are written to `/dist`.
 npm run check
 ```
 
-This runs type checking, ESLint, Vitest, and the production build. GitHub Actions CI runs the same PR-ready verification path with `npm ci` followed by `npm run check` on pull requests and pushes to `main`.
+This runs type checking, ESLint, Vitest, and the production build. GitHub Actions CI runs frontend checks with `npm ci` followed by `npm run check`; a separate backend job installs Python 3.12 dependencies and runs `cd backend && python -m pytest`.
 
 ---
 
