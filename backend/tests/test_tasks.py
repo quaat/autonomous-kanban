@@ -61,3 +61,9 @@ def test_move_task_invalid_status(client):
     response = client.post("/api/tasks/task-1/move", json={"status": "invalid"})
     assert response.status_code == 400
     assert_error_body(response, "INVALID_REQUEST")
+
+
+def test_create_task_duplicate_id_returns_controlled_error(client):
+    response = client.post("/api/tasks", json={"id": "task-1", "title": "Duplicate", "status": "to_do"})
+    assert response.status_code == 409
+    assert_error_body(response, "TASK_ALREADY_EXISTS")

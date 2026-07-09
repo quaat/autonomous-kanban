@@ -1,18 +1,31 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from .config import get_settings
+from .db.repository import SqlRepository
+from .db.session import create_schema, make_engine, make_session_factory
 from .errors import install_error_handlers
-from .repository import InMemoryRepository
+from .memory_repository import InMemoryRepository
+from .repository import Repository
 from .routers import activity, tasks, workflow
 
 
-def create_app(repository: InMemoryRepository | None = None) -> FastAPI:
+def build_repository() -> Repository:
+    settings = get_settings()
+    if settings.backend_repository == "sqlite":
+        engine = make_engine(settings.database_url)
+        create_schema(engine)
+        return SqlRepository(make_session_factory(engine))
+    return InMemoryRepository()
+
+
+def create_app(repository: Repository | None = None) -> FastAPI:
     app = FastAPI(
         title="Autonomous Kanban Contract Backend",
         version="0.1.0",
-        description="Minimal in-memory FastAPI backend matching the frontend DTO contract. No production side effects.",
+        description="FastAPI backend matching the frontend DTO contract.",
     )
-    app.state.repository = repository or InMemoryRepository()
+    app.state.repository = repository or build_repository()
 
     app.add_middleware(
         CORSMiddleware,
