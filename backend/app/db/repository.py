@@ -44,6 +44,8 @@ class SqlRepository:
         with self.session_factory() as session:
             data = request.model_dump(exclude_none=True, mode="json")
             data["id"] = data.get("id") or _next_id(session, TaskRecord, "task")
+            if session.get(TaskRecord, data["id"]) is not None:
+                raise ApiError(409, "TASK_ALREADY_EXISTS", "Task already exists")
             data.setdefault("description", "")
             data.setdefault("priority", "medium")
             data.setdefault("labels", [])
@@ -87,6 +89,8 @@ class SqlRepository:
         with self.session_factory() as session:
             data = request.model_dump(exclude_none=True, mode="json")
             data["id"] = data.get("id") or _next_id(session, ActivityEventRecord, "evt")
+            if session.get(ActivityEventRecord, data["id"]) is not None:
+                raise ApiError(409, "ACTIVITY_EVENT_ALREADY_EXISTS", "Activity event already exists")
             order_index = (session.scalar(select(func.min(ActivityEventRecord.order_index))) or 0) - 1
             session.add(ActivityEventRecord(id=data["id"], time=data["time"], type=data["type"], message=data["message"], order_index=order_index, data=data))
             session.commit()

@@ -32,7 +32,7 @@ BACKEND_REPOSITORY=sqlite  # durable local SQLite persistence
 DATABASE_URL=sqlite:///./dev.db
 ```
 
-The SQLite repository seeds an empty database from the root `fixtures/*.json` files and stores tasks, activity events, workflow nodes, workflow edges, and publish state. Alembic migrations can create the schema from scratch:
+The SQLite repository is intended for local/dev persistence, not production persistence. It seeds an empty database from the root `fixtures/*.json` files and stores tasks, activity events, workflow nodes, workflow edges, and publish state. Alembic migrations can create the schema from scratch:
 
 ```bash
 cd backend

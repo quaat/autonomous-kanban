@@ -34,6 +34,8 @@ class InMemoryRepository:
         if not data.get("id"):
             self.task_sequence += 1
             data["id"] = f"task-{self.task_sequence}"
+        if any(task["id"] == data["id"] for task in self.tasks):
+            raise ApiError(409, "TASK_ALREADY_EXISTS", "Task already exists")
         data.setdefault("description", "")
         data.setdefault("priority", "medium")
         data.setdefault("labels", [])
@@ -66,6 +68,8 @@ class InMemoryRepository:
         if not data.get("id"):
             self.event_sequence += 1
             data["id"] = f"evt-{self.event_sequence}"
+        if any(event["id"] == data["id"] for event in self.activity_events):
+            raise ApiError(409, "ACTIVITY_EVENT_ALREADY_EXISTS", "Activity event already exists")
         self.activity_events.insert(0, data)
         return self._clone(data)
 
